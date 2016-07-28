@@ -1,0 +1,41 @@
+version: '2'
+services:
+  redis:
+    build: ./redis
+    container_name: scumblr-redis
+    expose:
+      - 6379
+
+  db:
+    build: ./postgresql
+    container_name: scumblr-postgresql
+    ports:
+      - 5432
+
+  app:
+    build: ./netflix/scumblr
+    container_name: scumblr-app
+    ports:
+      - 3000:3000
+    depends_on:
+      - db
+      - redis
+      - sidekiq
+    links:
+      - db
+    environment:
+      - RAILS_ENV=production
+
+  sidekiq:
+    build: ./netflix/scumblr
+    container_name: scumblr-sidekiq
+    ports:
+      - 80
+    depends_on:
+      - redis
+    links:
+      - redis
+    environment:
+      - RAILS_ENV=production
+      - REDIS_URL=redis://redis
+    entrypoint: bash --login -c "bundle exec sidekiq"
