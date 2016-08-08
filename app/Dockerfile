@@ -1,5 +1,5 @@
-# Source from Idle Pattern's Ubuntu 14.x with rbenv
-FROM idlepattern/ubuntu-14-rbenv
+# Source from Idle Pattern's Ubuntu latest with rbenv
+FROM idlepattern/ubuntu-rbenv
 ARG RUBY_VERSION=2.0.0-p481
 ENV RUBY_VERSION ${RUBY_VERSION}
 
@@ -9,15 +9,15 @@ RUN apt-get update && apt-get -y install autoconf bison libpq-dev libtool \
 
 # Housekeeping/attribution
 MAINTAINER "Omachonu Ogali" <oogali@idlepattern.com>
-ENV container docker
 
 # Install and select the version of Ruby this project needs
-ENV CONFIGURE_OPTS --disable-install-doc
 RUN bash --login -c "rbenv install ${RUBY_VERSION}"
 RUN bash --login -c "rbenv global ${RUBY_VERSION} && ruby -v"
 
-# Install Bundler, and rehash rbenv commands (this only needs to be done with the Bundler gem)
-RUN echo 'gem: --no-rdoc --no-ri' >> /.gemrc
+# Upgrade Rubygems, install Bundler, and rehash rbenv commands
+# (this only needs to be done with the Bundler gem)
+RUN echo 'gem: --no-rdoc --no-ri' >> /etc/gemrc
+RUN bash --login -c "gem update --system"
 RUN bash --login -c "gem install bundler && rbenv rehash"
 
 # Checkout scumblr repo
@@ -25,10 +25,14 @@ RUN mkdir -p /apps && git clone https://github.com/Netflix/Scumblr.git /apps/scu
 
 WORKDIR /apps/scumblr
 
-# Install gems and initialize database
+# Set entrypoint
+COPY docker-entrypoint.sh /
+ENTRYPOINT ["/docker-entrypoint.sh"]
+
+# Install gems
+ENV BUNDLE_PATH /bundle
 RUN bash --login -c "bundle install"
-RUN bash --login -c "rake db:create && rake db:schema:load"
 
 # Launch server
 EXPOSE 3000
-CMD bash --login -c "bundle exec rails server"
+CMD ['rails', 'server']

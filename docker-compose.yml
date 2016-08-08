@@ -1,41 +1,71 @@
 version: '2'
+
 services:
-  redis:
-    build: ./redis
-    container_name: scumblr-redis
-    expose:
+  cache:
+    image: redis:alpine
+    container_name: scumblr-cache
+    ports:
       - 6379
+    command: redis-server --bind 0.0.0.0 --maxmemory 128mb --maxmemory-policy allkeys-lru
+    restart: on-failure:5
 
   db:
-    build: ./postgresql
-    container_name: scumblr-postgresql
+    build: db
+    container_name: scumblr-db
     ports:
       - 5432
+    restart: on-failure:5
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data/pgdata
+    environment:
+      POSTGRES_USER: sqladmin
+      POSTGRES_PASSWORD: sqladmin
+      PGDATA: /var/lib/postgresql/data/pgdata
+
+  bundle:
+    build: app
+    command: echo
+    volumes:
+      - app-bundle:/bundle
 
   app:
-    build: ./netflix/scumblr
+    build: app
     container_name: scumblr-app
     ports:
       - 3000:3000
     depends_on:
       - db
-      - redis
-      - sidekiq
+      - cache
+      - queue
     links:
       - db
     environment:
       - RAILS_ENV=production
+      - REDIS_URL=redis://cache
+      - DATABASE_URL=postgres://scumblr:scumblr@db/scumblr
+    volumes_from:
+      - bundle
+    command: rails server
 
-  sidekiq:
-    build: ./netflix/scumblr
-    container_name: scumblr-sidekiq
-    ports:
-      - 80
+  queue:
+    build: app
+    container_name: scumblr-queue
+    restart: on-failure:5
     depends_on:
-      - redis
+      - db
+      - cache
     links:
-      - redis
+      - db
+      - cache
     environment:
       - RAILS_ENV=production
-      - REDIS_URL=redis://redis
-    entrypoint: bash --login -c "bundle exec sidekiq"
+      - REDIS_URL=redis://cache
+      - DATABASE_URL=postgres://scumblr@db/scumblr
+    volumes_from:
+      - bundle
+    command: sidekiq
+
+volumes:
+  app-bundle:
+
+  postgresql-data:
