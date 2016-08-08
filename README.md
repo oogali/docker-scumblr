@@ -9,10 +9,11 @@ You'll simply just want:
 docker-compose up
 ```
 
-It will create four containers based on Ubuntu 14.04 LTS for:
+It will create four containers based on the latest Ubuntu version
+(with rbenv) for:
 - PostgreSQL
 - Redis
 - Scumblr (Rails)
 - Sidekiq
 
-The default login is `admin / admin`.
+The default login is `admin@nowhere.com / admin`.
