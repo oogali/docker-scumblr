@@ -1,0 +1,10 @@
+scumblr:
+  development:
+    adapter: postgresql
+    encoding: unicode
+    database: <%= ENV['DB_NAME'] %>
+    host: <%= ENV['DB_HOST'] %>
+    port: <%= ENV['DB_PORT'] %>
+    username: <%= ENV['DB_USERNAME'] %>
+    password: <%= ENV['DB_PASSWORD'] %>
+    pool: 20

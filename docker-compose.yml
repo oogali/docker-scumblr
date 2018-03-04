@@ -1,0 +1,63 @@
+version: '3'
+
+services:
+  app:
+    build: app
+    image: oogali/netflix-scumblr
+    environment:
+      RAILS_ENVIRONMENT: dev
+      DB_NAME: scumblr
+      DB_HOST: postgresql
+      DB_PORT: 5432
+      DB_USERNAME: scumblr
+      DB_PASSWORD: scumblr
+      REDIS_URI: redis://redis:6379/0
+    ports:
+      - 3000
+    links:
+      - redis
+      - postgresql
+    depends_on:
+      - redis
+      - postgresql
+    restart: unless-stopped
+
+  sidekiq:
+    image: oogali/netflix-scumblr
+    environment:
+      RAILS_ENVIRONMENT: dev
+      DB_NAME: scumblr
+      DB_HOST: postgresql
+      DB_PORT: 5432
+      DB_USERNAME: scumblr
+      DB_PASSWORD: scumblr
+      SKIP_MIGRATIONS: "true"
+      REDIS_URI: redis://redis:6379/0
+    command: ["bundle", "exec", "sidekiq"]
+    links:
+      - redis
+      - postgresql
+    depends_on:
+      - app
+    restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    command: redis-server --bind 0.0.0.0 --maxmemory 128mb --maxmemory-policy allkeys-lru --save "" --appendonly no
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  postgresql:
+    image: postgres:10-alpine
+    environment:
+      POSTGRES_USER: scumblr
+      POSTGRES_PASSWORD: scumblr
+      DB_NAME: scumblr
+    volumes:
+      - database-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  database-data:
